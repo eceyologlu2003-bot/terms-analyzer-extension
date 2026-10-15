@@ -72,14 +72,15 @@ function verifyDeterministic(llmJson, sourceText) {
   };
 }
 
-// LLM API Çağrısı (Model Aşırı Yüklenmelerine Karşı Yedekli ve Dayanıklı Yapı)
+// LLM API Çağrısı (Geçici Yoğunluklara Karşı Otomatik Yeniden Deneme ve Hız Optimizasyonu)
 async function callLLM(sourceText, apiKey, provider) {
-  // Yoğunluk anında sırayla denenecek modeller listesi
+  // Aşırı uzun sayfalarda sunucunun 'high demand' veya zaman aşımı vermemesi için güvenli metin boyutu
+  const optimizedText = sourceText.length > 20000 ? sourceText.slice(0, 20000) : sourceText;
+
+  // Aktif modeller
   const candidateModels = [
     'gemini-3.8-flash',
-    'gemini-2.5-flash',
-    'gemini-1.5-flash',
-    'gemini-2.0-flash'
+    'gemini-3.8-pro'
   ];
 
   const requestBody = {
@@ -90,7 +91,7 @@ async function callLLM(sourceText, apiKey, provider) {
       {
         role: "user",
         parts: [
-          { text: "Aşağıdaki metni analiz et ve kesinlikle istenen JSON formatında yanıt dön. Başka hiçbir şey yazma.\n\nMETİN:\n" + sourceText }
+          { text: "Aşağıdaki metni analiz et ve kesinlikle istenen JSON formatında yanıt dön. Başka hiçbir şey yazma.\n\nMETİN:\n" + optimizedText }
         ]
       }
     ],
@@ -129,40 +130,45 @@ async function callLLM(sourceText, apiKey, provider) {
   let lastError = null;
 
   for (const model of candidateModels) {
-    try {
-      console.log(`Model deneniyor: ${model}`);
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
+    // Her model için 2 defa deneme (geçici spike'ları atlatmak için)
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        console.log(`[Terms Analyzer] Model: ${model} (Deneme ${attempt})`);
 
-      if (response.ok) {
-        const data = await response.json();
-        const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!jsonText) throw new Error("LLM boş yanıt döndürdü.");
-        return JSON.parse(jsonText);
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!jsonText) throw new Error("Model boş yanıt döndürdü.");
+          return JSON.parse(jsonText);
+        }
+
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error?.message || response.statusText;
+        lastError = new Error(errorMsg);
+
+        // Eğer yoğunluk uyarısı ise 2 saniye bekleyip tekrar dene
+        if (response.status === 503 || errorMsg.includes("high demand") || errorMsg.includes("overloaded")) {
+          console.warn(`[Terms Analyzer] Geçici yoğunluk, 2 saniye beklenip tekrar deneniyor...`);
+          await new Promise(r => setTimeout(r, 2000));
+          continue;
+        } else {
+          // Model desteklenmiyorsa veya başka bir hataysa sonraki modele geç
+          break;
+        }
+      } catch (err) {
+        lastError = err;
+        await new Promise(r => setTimeout(r, 1000));
       }
-
-      const errorData = await response.json().catch(() => ({}));
-      const errorMsg = errorData.error?.message || response.statusText;
-      console.warn(`${model} yanıt vermedi: ${errorMsg}`);
-      lastError = new Error(errorMsg);
-
-      // Eğer yoğunluk / kota uyarısıysa hemen pes etmeyip sonraki modeli dene
-      if (response.status === 503 || response.status === 429 || errorMsg.includes("high demand") || errorMsg.includes("overloaded")) {
-        continue;
-      } else {
-        // Model bulunamadı veya başka bir hataysa sonraki modeli dene
-        continue;
-      }
-    } catch (err) {
-      lastError = err;
-      console.warn(`${model} hatası:`, err.message);
     }
   }
 
-  throw new Error(`API Hatası: ${lastError?.message || "Sunucular şu an yoğun, lütfen 10-15 saniye sonra tekrar deneyin."}`);
+  throw new Error(`Google API şu an çok yoğun: ${lastError?.message || "Lütfen birkaç saniye sonra tekrar deneyin."}`);
 }
