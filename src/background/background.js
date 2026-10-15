@@ -72,15 +72,16 @@ function verifyDeterministic(llmJson, sourceText) {
   };
 }
 
-// LLM API Çağrısı (Gemini API Entegrasyonu)
+// LLM API Çağrısı (Model Aşırı Yüklenmelerine Karşı Yedekli ve Dayanıklı Yapı)
 async function callLLM(sourceText, apiKey, provider) {
-  // Şimdilik sadece Gemini destekleniyor (Kullanıcı girişine göre genişletilebilir)
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
-  
-  // prompt injection koruması system_instruction ile de sağlanabilir, ancak
-  // contents içerisine user olarak gönderip, prompt metni ile yönlendirmek daha standarttır.
-  // Gemini structured output JSON schema:
-  
+  // Yoğunluk anında sırayla denenecek modeller listesi
+  const candidateModels = [
+    'gemini-3.8-flash',
+    'gemini-2.5-flash',
+    'gemini-1.5-flash',
+    'gemini-2.0-flash'
+  ];
+
   const requestBody = {
     system_instruction: {
       parts: [{ text: SYSTEM_PROMPT }]
@@ -125,25 +126,43 @@ async function callLLM(sourceText, apiKey, provider) {
     }
   };
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(requestBody)
-  });
+  let lastError = null;
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(`API Hatası: ${errorData.error?.message || response.statusText}`);
+  for (const model of candidateModels) {
+    try {
+      console.log(`Model deneniyor: ${model}`);
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!jsonText) throw new Error("LLM boş yanıt döndürdü.");
+        return JSON.parse(jsonText);
+      }
+
+      const errorData = await response.json().catch(() => ({}));
+      const errorMsg = errorData.error?.message || response.statusText;
+      console.warn(`${model} yanıt vermedi: ${errorMsg}`);
+      lastError = new Error(errorMsg);
+
+      // Eğer yoğunluk / kota uyarısıysa hemen pes etmeyip sonraki modeli dene
+      if (response.status === 503 || response.status === 429 || errorMsg.includes("high demand") || errorMsg.includes("overloaded")) {
+        continue;
+      } else {
+        // Model bulunamadı veya başka bir hataysa sonraki modeli dene
+        continue;
+      }
+    } catch (err) {
+      lastError = err;
+      console.warn(`${model} hatası:`, err.message);
+    }
   }
 
-  const data = await response.json();
-  const jsonText = data.candidates[0].content.parts[0].text;
-  
-  try {
-    return JSON.parse(jsonText);
-  } catch (e) {
-    throw new Error("LLM geçersiz bir JSON döndürdü.");
-  }
+  throw new Error(`API Hatası: ${lastError?.message || "Sunucular şu an yoğun, lütfen 10-15 saniye sonra tekrar deneyin."}`);
 }
