@@ -72,16 +72,12 @@ function verifyDeterministic(llmJson, sourceText) {
   };
 }
 
-// LLM API Çağrısı (Geçici Yoğunluklara Karşı Otomatik Yeniden Deneme ve Hız Optimizasyonu)
+// LLM API Çağrısı (Google Gemini 3.8 Flash + Otomatik Yeniden Deneme)
 async function callLLM(sourceText, apiKey, provider) {
-  // Aşırı uzun sayfalarda sunucunun 'high demand' veya zaman aşımı vermemesi için güvenli metin boyutu
-  const optimizedText = sourceText.length > 20000 ? sourceText.slice(0, 20000) : sourceText;
+  // Aşırı uzun sayfalarda sunucunun 'high demand' vermemesi için akıllı boyut sınırlaması
+  const optimizedText = sourceText.length > 15000 ? sourceText.slice(0, 15000) : sourceText;
 
-  // Aktif modeller
-  const candidateModels = [
-    'gemini-3.8-flash',
-    'gemini-3.8-pro'
-  ];
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
 
   const requestBody = {
     system_instruction: {
@@ -128,47 +124,52 @@ async function callLLM(sourceText, apiKey, provider) {
   };
 
   let lastError = null;
+  const maxRetries = 3;
 
-  for (const model of candidateModels) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[Terms Analyzer] İstek gönderiliyor (Deneme ${attempt}/${maxRetries})...`);
 
-    // Her model için 2 defa deneme (geçici spike'ları atlatmak için)
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        console.log(`[Terms Analyzer] Model: ${model} (Deneme ${attempt})`);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
 
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody)
-        });
+      if (response.ok) {
+        const data = await response.json();
+        const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!jsonText) throw new Error("Model boş yanıt döndürdü.");
+        return JSON.parse(jsonText);
+      }
 
-        if (response.ok) {
-          const data = await response.json();
-          const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (!jsonText) throw new Error("Model boş yanıt döndürdü.");
-          return JSON.parse(jsonText);
-        }
+      const errorData = await response.json().catch(() => ({}));
+      const errorMsg = errorData.error?.message || response.statusText;
+      lastError = new Error(errorMsg);
 
-        const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.error?.message || response.statusText;
-        lastError = new Error(errorMsg);
-
-        // Eğer yoğunluk uyarısı ise 2 saniye bekleyip tekrar dene
-        if (response.status === 503 || errorMsg.includes("high demand") || errorMsg.includes("overloaded")) {
-          console.warn(`[Terms Analyzer] Geçici yoğunluk, 2 saniye beklenip tekrar deneniyor...`);
-          await new Promise(r => setTimeout(r, 2000));
+      // Geçici yoğunluk / spike durumunda bekle ve tekrar dene
+      if (response.status === 503 || errorMsg.includes("high demand") || errorMsg.includes("overloaded")) {
+        if (attempt < maxRetries) {
+          const waitTime = attempt * 2000;
+          console.warn(`[Terms Analyzer] Google sunucuları geçici yoğunluk yaşıyor, ${waitTime / 1000} saniye sonra tekrar deneniyor...`);
+          await new Promise(r => setTimeout(r, waitTime));
           continue;
         } else {
-          // Model desteklenmiyorsa veya başka bir hataysa sonraki modele geç
-          break;
+          throw new Error("Google Gemini sunucularında şu an dünya genelinde anlık bir yoğunluk (high demand) yaşanıyor. Lütfen 15-20 saniye sonra tekrar 'Sayfayı Analiz Et' butonuna basın.");
         }
-      } catch (err) {
-        lastError = err;
-        await new Promise(r => setTimeout(r, 1000));
+      } else {
+        throw new Error(errorMsg);
+      }
+    } catch (err) {
+      lastError = err;
+      if (err.message.includes("dünya genelinde anlık bir yoğunluk")) {
+        throw err;
+      }
+      if (attempt < maxRetries) {
+        await new Promise(r => setTimeout(r, 1500));
       }
     }
   }
 
-  throw new Error(`Google API şu an çok yoğun: ${lastError?.message || "Lütfen birkaç saniye sonra tekrar deneyin."}`);
+  throw lastError || new Error("Analiz sırasında bir bağlantı hatası oluştu.");
 }
