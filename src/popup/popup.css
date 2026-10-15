@@ -1,0 +1,154 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  width: 350px;
+  margin: 0;
+  padding: 0;
+  color: #333;
+}
+
+.container {
+  padding: 15px;
+}
+
+.header {
+  text-align: center;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.header h2 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  color: #2c3e50;
+}
+
+.legal-warning {
+  background-color: #ffeb3b;
+  color: #d32f2f;
+  font-weight: bold;
+  padding: 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  border: 1px solid #fbc02d;
+  text-align: center;
+}
+
+.settings {
+  background: #f9f9f9;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 12px;
+}
+
+.settings input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px;
+  margin: 5px 0;
+}
+
+.action-panel {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.primary-btn {
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.primary-btn:hover {
+  background-color: #1565c0;
+}
+
+.primary-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#loading {
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+}
+
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #1976d2;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  margin: 10px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.score-card {
+  text-align: center;
+  background: #e3f2fd;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+}
+
+.score-card h3 {
+  margin: 0;
+  color: #1565c0;
+}
+
+.clause-item {
+  border: 1px solid #e0e0e0;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.clause-original {
+  font-size: 11px;
+  color: #666;
+  font-style: italic;
+  margin-bottom: 6px;
+  border-left: 2px solid #ccc;
+  padding-left: 5px;
+}
+
+.clause-explanation {
+  font-size: 13px;
+  color: #d32f2f;
+  font-weight: 500;
+}
+
+.uncertain-clause {
+  font-size: 12px;
+  color: #ef6c00;
+  background: #fff3e0;
+  padding: 5px;
+  border-radius: 4px;
+  margin-top: 5px;
+  font-weight: bold;
+}
+
+.error-text {
+  color: #d32f2f;
+  background: #ffebee;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+}

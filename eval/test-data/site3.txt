@@ -1,0 +1,7 @@
+ZOOM HİZMET ŞARTLARI - MÜŞTERİ İÇERİĞİ VE YAPAY ZEKA
+
+Bölüm 10.2 Hizmet Tarafından Oluşturulan Veriler ve Yapay Zeka:
+Zoom'a, Müşteri İçeriğinizi ve Müşteri Tarafından Oluşturulan Verileri; yapay zeka modelleri, algoritmalar ve makine öğrenimi sistemlerini eğitmek, test etmek ve geliştirmek amacıyla kullanmak, değiştirmek ve işlemek üzere kalıcı, geri alınamaz, telifsiz ve dünya çapında bir hak ve lisans verirsiniz.
+
+Uyuşmazlık Çözümü ve Toplu Dava Feragati:
+Taraflar arasındaki tüm uyuşmazlıklar bağlayıcı bireysel tahkim yoluyla çözülecektir. Kullanıcı, Zoom'a karşı herhangi bir toplu davaya (class action) katılma hakkından açıkça feragat eder.

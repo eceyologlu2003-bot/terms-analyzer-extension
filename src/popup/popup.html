@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Terms Analyzer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Terms Analyzer</h2>
+      <!-- ZORUNLU KURAL: Hukuki tavsiye uyarısı -->
+      <div class="legal-warning">DİKKAT: Bu uygulama hukuki tavsiye vermez.</div>
+    </div>
+
+    <div class="settings" id="settingsPanel">
+      <label for="apiKey">Gemini API Anahtarı:</label>
+      <input type="password" id="apiKey" placeholder="AIzaSy...">
+      <button id="saveKeyBtn">Kaydet</button>
+      <span id="saveStatus"></span>
+    </div>
+
+    <div class="action-panel">
+      <button id="analyzeBtn" class="primary-btn">Sayfayı Analiz Et</button>
+    </div>
+
+    <div id="loading" class="hidden">
+      <p>Sayfa analiz ediliyor... (Bu işlem biraz sürebilir)</p>
+      <div class="spinner"></div>
+    </div>
+
+    <div id="results" class="hidden">
+      <div class="score-card">
+        <h3>Risk Skoru: <span id="riskScore"></span>/10</h3>
+      </div>
+      <div id="clausesList"></div>
+    </div>
+    
+    <div id="errorBox" class="hidden error-text"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

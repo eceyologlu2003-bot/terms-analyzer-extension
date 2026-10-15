@@ -1,0 +1,21 @@
+{
+  "name": "terms-analyzer-ext",
+  "version": "1.0.0",
+  "description": "Chrome Extension Manifest V3 - Hukuki Metin ve ToS Analiz Aracı",
+  "scripts": {
+    "eval": "node eval/evaluate.js",
+    "cypress:open": "cypress open",
+    "cypress:run": "cypress run"
+  },
+  "keywords": [
+    "chrome-extension",
+    "llm",
+    "terms-of-service",
+    "cypress"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "cypress": "^13.17.0"
+  }
+}
